@@ -18,6 +18,7 @@ from PIL import Image, ImageChops
 import os
 import numpy as np
 import sys
+import argparse
 
 
 def ImageCompare(i1, i2, resize=True):
@@ -26,8 +27,6 @@ def ImageCompare(i1, i2, resize=True):
     similarity in a range between 0 (no difference) and 1 (absolute difference).
     A value of 1 is the result of comparing a full white image against a full black image. A value
     of 0 is obtained when comparing two identical images.
-    
-    
     """
     if resize:
         i1 = i1.resize((500, 500), Image.BICUBIC)
@@ -35,10 +34,10 @@ def ImageCompare(i1, i2, resize=True):
     i3 = ImageChops.difference(i1, i2)
     i3.show()
     arr = np.array(i3)
-    return float(arr.sum()) / (500*500*(255*3))
+    return float(arr.sum()) / (500 * 500 * (255 * 3))
 
 
-class ImageData(object):
+class ImageData:
     """A data holding object, it stores a PIL image and its path."""
     def __init__(self, image, path):
         self.image = image
@@ -47,7 +46,7 @@ class ImageData(object):
 
 def WalkCompare(args):
     images = []
-    for root, dirs, files in os.walk(args.ofolder):
+    for root, _, files in os.walk(args.ofolder):
         for filename in files:
             extension = os.path.splitext(filename)[1].lower()
             if extension in args.formats:
@@ -55,9 +54,8 @@ def WalkCompare(args):
                 im = Image.open(path)
                 im = im.resize((500, 500), Image.BICUBIC)
                 images.append(ImageData(im, path))
-        #for file
-    #for root
-    for root, dirs, files in os.walk(args.ifolder):
+
+    for root, _, files in os.walk(args.ifolder):
         for filename in files:
             extension = os.path.splitext(filename)[1].lower()
             if extension in args.formats:
@@ -68,41 +66,35 @@ def WalkCompare(args):
                     im2 = i.image
                     res = ImageCompare(im1, im2, False)
                     if res <= args.threshold:
-                        print "%s, %s, %f" % (path, i.path, res)
-        #for file
-    #for root
-    
+                        print(f"{path}, {i.path}, {res:.6f}")
+
 
 def ArgParse():
-    # parse command line arguments
-    import argparse
     parser = argparse.ArgumentParser(
-        description='compare: Compares two directorys looking for visually similar images.')
+        description='compare: Compares two directories looking for visually similar images.')
+    parser.add_argument('ofolder', help="The directory with the original images.")
+    parser.add_argument('ifolder', help="The directory that will be analysed.")
     parser.add_argument(
-        'ofolder',
-        help="The directory with the original images.")
-    parser.add_argument(
-        'ifolder',
-        help="The directory that will be analysed.")
-    parser.add_argument(
-        "-t", 
+        "-t",
         dest="threshold",
         type=float,
         default=0.1,
-        help="The similarity threshold that determines if two images are similar.")
-    args = parser.parse_args()
-    return args
+        help="The similarity threshold that determines if two images are similar."
+    )
+    return parser.parse_args()
 
 
 def main():
     args = ArgParse()
     args.formats = ['.jpg', '.png', '.bmp']
+    
     if os.path.isdir(args.ifolder) and os.path.isdir(args.ofolder):
         WalkCompare(args)
     else:
-        print "One of the specified directories is not a directory or does not exist."
+        print("One of the specified directories is not a directory or does not exist.")
         return 1
     return 0
+
 
 if __name__ == '__main__':
     sys.exit(main())
